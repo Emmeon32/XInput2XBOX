@@ -37,10 +37,41 @@ S21  XJj88  0u  1uY2.        X2k           .    k11E   v    7;ii:JuJvLvLvJ2:
 * along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <avr/io.h>
 #include "XBOXPad.h"
+#include "I2CSlave.h"
 #include "util.h"
 
+
+#define I2C_ADDR 0x10
+#define PAD_IDX 'a'
+#define BUT_DPAD_UP 0
+#define BUT_DPAD_DOWN 1
+#define BUT_DPAD_LEFT 2
+#define BUT_DPAD_RIGHT 3
+#define BUT_START 4
+#define BUT_BACK 5
+#define BUT_LEFTSTICK 6
+#define BUT_RIGHTSTICK 7
+
+#define BUT_LEFTBUMP 1
+#define BUT_RIGHTBUMP 2
+// two values are skipped here
+#define BUT_A 4
+#define BUT_B 5
+#define BUT_X 6
+#define BUT_Y 7
+
+
+
 void setup_pins(void);
+void twiTest(void);
+void I2C_receieved(uint8_t data);
+void I2C_requested(void);
+void forwardStateBuffer(void);
+
+volatile char stateBuffer[8];
+
 
 int main(void) {
 	uint8_t pad_up, pad_down, pad_left, pad_right, pad_y, pad_b, pad_x, pad_a, pad_black,
@@ -55,10 +86,13 @@ int main(void) {
 	bit_set(MCUCR, 1 << JTD);
 
 	// Setup pins
-	setup_pins();
+	//setup_pins();
 
 	// Init XBOX pad emulation
 	xbox_init(true);
+	
+	twiTest();
+
 
 	// Pins polling and gamepad status updates
 	for (;;) {
@@ -136,6 +170,87 @@ int main(void) {
 		xbox_send_pad_state();
 	}
 }
+
+volatile uint8_t recData;
+
+volatile int byteIdx = 0;
+volatile bool receiving = false;
+
+
+
+void I2C_received(uint8_t data)
+{
+	recData = data;
+	PORTC = 0xFF;
+	if((char)data == PAD_IDX)
+	{
+		// Start receiving:
+		byteIdx = 0;
+	}else
+	{
+		if(byteIdx < 8)
+			stateBuffer[byteIdx] = data;
+		
+		byteIdx++;
+	}
+
+	if(byteIdx == 8)
+	{
+		PORTC = 0xFF;
+		forwardStateBuffer();
+	}
+}
+
+void forwardStateBuffer()
+{
+	// Copy the state buffer to the emulated gamepad
+	xbox_reset_watchdog();
+	
+	// Analog controls
+	gamepad_state.l_x = (((int)stateBuffer[0]) * 0xFF) + 0x8000;
+	gamepad_state.l_y = (((int)stateBuffer[1]) * 0xFF) - 0x8000;
+	gamepad_state.r_x = (((int)stateBuffer[2]) * 0xFF) + 0x8000;
+	gamepad_state.r_y = (((int)stateBuffer[3]) * 0xFF) - 0x8000;
+	gamepad_state.l   = (int)stateBuffer[4];
+	gamepad_state.r   = (int)stateBuffer[5];
+	
+	// Buttons
+	gamepad_state.digital_buttons = stateBuffer[7];
+	
+	if(stateBuffer[6] & 0x1) { gamepad_state.white = 0xFF; }else{ gamepad_state.white = 0x00; }
+	if(stateBuffer[6] & 0x2) { gamepad_state.black = 0xFF; }else{ gamepad_state.black = 0x00; }
+	
+	if(stateBuffer[6] & 0x10){ gamepad_state.a = 0xFF; }else{ gamepad_state.a = 0x00; }
+        if(stateBuffer[6] & 0x20){ gamepad_state.b = 0xFF; }else{ gamepad_state.b = 0x00; }
+        if(stateBuffer[6] & 0x40){ gamepad_state.x = 0xFF; }else{ gamepad_state.x = 0x00; }
+        if(stateBuffer[6] & 0x80){ gamepad_state.y = 0xFF; }else{ gamepad_state.y = 0x00; }
+
+
+	xbox_send_pad_state();
+}
+
+void I2C_requested()
+{
+	// transmit the last received byte
+	I2C_transmitByte(recData);
+}
+
+void twiTest()
+{
+	DDRC = 0xff;
+	PORTC = 0x00;
+	I2C_init(8);
+	I2C_setCallbacks(I2C_received, I2C_requested);
+	
+	while(true)
+	{
+		PORTC = 0xFF;
+	}
+}
+
+
+
+
 
 void setup_pins(void) {
 
