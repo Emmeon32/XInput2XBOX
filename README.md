@@ -47,17 +47,21 @@ Once everything is connected, each controller will send XInput data to the XBox.
 
 If you want to modify the source code, some of the information in here may be helpful.
 
+```
 XInput Gamepad | I2C Address | Char Identifier
 ===============|=============|=================
       0        |    0x10     |       'a'
       1        |    0x12     |       'b'
       2        |    0x14     |       'c'
       3        |    0x16     |       'd'
+```
 
 As well as unique addresses, every Leo has a character associated with it. This character must be alphabetical (more specifically, non-numeric), as this distinguishes the start of serialised packets. Packets do not have a length; the 4 Leos will simply collect the bytes trailing their unique header character until their 8-byte buffers are full.
 
 The buffers are arranged in the same order as the descriptor used in actual xbox controllers:
 
+
+```
 Byte | Associated Value
 =====|==================
   0  | LEFT STICK  X
@@ -68,5 +72,5 @@ Byte | Associated Value
   5  | RIGHT TRIGGER
   6  | BUTTONS (Digital)
   7  | BUTTONS (Analog)
-  
+```
   
