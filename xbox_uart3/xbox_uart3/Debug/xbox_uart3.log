@@ -1,6 +1,5 @@
 ﻿  program.cpp
-g:\downloads\chrome\f52led6i8bgqdw2\xbox_uart3\xbox_uart3\program.cpp(208): warning C4996: 'sprintf': This function or variable may be unsafe. Consider using sprintf_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+g:\downloads\chrome\f52led6i8bgqdw2\xbox_uart3\xbox_uart3\program.cpp(249): warning C4996: 'sprintf': This function or variable may be unsafe. Consider using sprintf_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
   c:\program files (x86)\windows kits\10\include\10.0.17134.0\ucrt\stdio.h(1774): note: see declaration of 'sprintf'
-g:\downloads\chrome\f52led6i8bgqdw2\xbox_uart3\xbox_uart3\program.cpp(285): warning C4101: 'e': unreferenced local variable
 stdafx.obj : warning LNK4075: ignoring '/EDITANDCONTINUE' due to '/INCREMENTAL:NO' specification
   xbox_uart3.vcxproj -> G:\Downloads\Chrome\F52LED6I8BGQDW2\xbox_uart3\Debug\xbox_uart3.exe

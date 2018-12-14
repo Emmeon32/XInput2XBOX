@@ -5,12 +5,16 @@
 #include <Windows.h>
 #include <Xinput.h>
 #include <iostream>
+#include <fstream>
+#include <string>
 #include "xbox_uart.h"
+#include <atlstr.h>
 
 #define WIN32_LEAN_AND_MEAN			// Strip the unwanted components
 #define MONITOR_GAMEPAD_STATE 1
 #define BUTTON_START 16
 #define BUTTON_BACK 32
+#define POLL_DELAY 5
 
 #pragma comment (lib,"XInput.lib")	// Necessary for linker
 
@@ -20,7 +24,7 @@ void printState(XINPUT_STATE* state); bool usbConnect(LPCWSTR portName, DWORD ba
 bool sendState(int pId, XINPUT_STATE* state);
 bool receiveState(char *buffer);
 void checkState(XINPUT_STATE* state);
-
+wstring s2ws(const std::string& s);
 
 LPCWSTR portName = L"COM4:";
 HANDLE port;
@@ -37,14 +41,39 @@ int _tmain(int argc, _TCHAR* argv[])
 	char recBuffer[BUFFER_SIZE];
 	memset(recBuffer, 0, BUFFER_SIZE);
 	port = INVALID_HANDLE_VALUE;
+	ifstream stream;
+	string config = "COM4:";
+	wstring tempStr;
+
+	stream.open("config.txt");
+	if (!stream)
+	{
+		cout << "Couldn't open config.txt\n";
+	}
+	else
+	{
+		if (getline(stream, config))
+		{
+			cout << "Config modified port to '" << config << "'\n";
+			tempStr = s2ws(config);
+			portName = tempStr.c_str();
+			
+		}
+	}
+	stream.close();
+
 	if (!usbConnect(portName, 115200))
 	{
-		cout << "WARNING: Couldn't open com port.";
+		cout << "WARNING: Couldn't open com port.\n";
+	}
+	else
+	{
+		cout << "COM port opened.\n";
 	}
 
 	while (true)
 	{
-		system("CLS");
+		std::system("CLS");
 
 		e1 = XInputGetState(0, &s1);
 		e2 = XInputGetState(1, &s2);
@@ -72,7 +101,7 @@ int _tmain(int argc, _TCHAR* argv[])
 			}
 
 		}
-		Sleep(9);
+		Sleep(POLL_DELAY);
 		if (e2 == ERROR_SUCCESS)
 		{
 			cout << "Player 2: \n";
@@ -84,7 +113,7 @@ int _tmain(int argc, _TCHAR* argv[])
 				cout << "UPLINK ERROR\n";
 			}
 		}
-		Sleep(9);
+		Sleep(POLL_DELAY);
 		if (e3 == ERROR_SUCCESS)
 		{
 			cout << "Player 3: \n";
@@ -95,7 +124,7 @@ int _tmain(int argc, _TCHAR* argv[])
 				cout << "UPLINK ERROR\n";
 			}
 		}
-		Sleep(9);
+		Sleep(POLL_DELAY);
 		if (e4 == ERROR_SUCCESS)
 		{
 			cout << "Player 4: \n";
@@ -115,12 +144,24 @@ int _tmain(int argc, _TCHAR* argv[])
 			usbConnect(portName, 115200);
 		}
 
-		Sleep(9);
+		Sleep(POLL_DELAY);
 	}
 
 	cout << "Exited.";
-	system("PAUSE");
+	std::system("PAUSE");
 	return 0;
+}
+
+std::wstring s2ws(const std::string& s)
+{
+	int len;
+	int slength = (int)s.length() + 1;
+	len = MultiByteToWideChar(CP_ACP, 0, s.c_str(), slength, 0, 0);
+	wchar_t* buf = new wchar_t[len];
+	MultiByteToWideChar(CP_ACP, 0, s.c_str(), slength, buf, len);
+	std::wstring r(buf);
+	delete[] buf;
+	return r;
 }
 
 void checkState(XINPUT_STATE* state)
@@ -239,8 +280,9 @@ bool usbConnect(LPCWSTR portName, DWORD baudRate)
 	try {
 		port = CreateFile(portName, GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, FILE_FLAG_WRITE_THROUGH, NULL);
 		// Try opening port communication
-		if (&port == INVALID_HANDLE_VALUE)
+		if (&port == INVALID_HANDLE_VALUE )
 		{
+			cout << "Invalid handle.";
 			CloseHandle(&port);
 			port = NULL;
 			return FALSE;
@@ -269,6 +311,8 @@ bool usbConnect(LPCWSTR portName, DWORD baudRate)
 													// Try reconfiguring COM port
 		if (!SetCommState(port, &portDCB))
 		{
+			cout << "Unable to set COM state. Error code ";
+			cout << GetLastError() << "\n";
 			CloseHandle(port);
 			port = NULL;
 			return FALSE;
@@ -284,6 +328,7 @@ bool usbConnect(LPCWSTR portName, DWORD baudRate)
 	}
 	catch (int e)
 	{
+		cout << e;
 	}
 
 	return TRUE;
